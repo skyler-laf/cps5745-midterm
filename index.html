@@ -1,0 +1,1079 @@
+<title>Outbreak Mechanics</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,400;8..60,500;8..60,600;8..60,700&family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+:root{
+  --bg:#F5F6F3;
+  --surface:#FFFFFF;
+  --surface-2:#EBEEEA;
+  --ink:#1A231D;
+  --ink-muted:#5B695F;
+  --ink-faint:#8C988E;
+  --line:#DCE3DC;
+  --line-strong:#C3CDC2;
+  --accent:#2B5F4D;
+  --accent-ink:#F4FAF6;
+  --accent-soft:#E1EDE6;
+  --susceptible:#3E7CB1;
+  --susceptible-soft:#DCE9F3;
+  --infected:#CC5A26;
+  --infected-soft:#F6E2D4;
+  --recovered:#4C8F63;
+  --recovered-soft:#DEEEE2;
+  --warn:#B23A2E;
+  --pass:#2E7D4F;
+  --shadow: 0 1px 2px rgba(20,28,22,0.05), 0 6px 20px rgba(20,28,22,0.06);
+  --radius: 7px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#10140F;
+    --surface:#171D16;
+    --surface-2:#1E251C;
+    --ink:#E8ECE4;
+    --ink-muted:#9DAA97;
+    --ink-faint:#6E7A6A;
+    --line:#2A332A;
+    --line-strong:#3A463A;
+    --accent:#72C7A3;
+    --accent-ink:#0E1A14;
+    --accent-soft:#1E3429;
+    --susceptible:#73AEDC;
+    --susceptible-soft:#1E2E3D;
+    --infected:#F0925A;
+    --infected-soft:#3A2A1E;
+    --recovered:#7BCB95;
+    --recovered-soft:#1E332455;
+    --warn:#E8897C;
+    --pass:#7BCB95;
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#10140F;
+  --surface:#171D16;
+  --surface-2:#1E251C;
+  --ink:#E8ECE4;
+  --ink-muted:#9DAA97;
+  --ink-faint:#6E7A6A;
+  --line:#2A332A;
+  --line-strong:#3A463A;
+  --accent:#72C7A3;
+  --accent-ink:#0E1A14;
+  --accent-soft:#1E3429;
+  --susceptible:#73AEDC;
+  --susceptible-soft:#1E2E3D;
+  --infected:#F0925A;
+  --infected-soft:#3A2A1E;
+  --recovered:#7BCB95;
+  --recovered-soft:#1E332455;
+  --warn:#E8897C;
+  --pass:#7BCB95;
+  --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+}
+
+*{box-sizing:border-box;}
+body{
+  background:var(--bg);
+  color:var(--ink);
+  font-family:'IBM Plex Sans', -apple-system, 'Segoe UI', sans-serif;
+  line-height:1.55;
+}
+h1,h2,h3{
+  font-family:'Source Serif 4', Georgia, 'Times New Roman', serif;
+  font-weight:600;
+  text-wrap:balance;
+  color:var(--ink);
+  margin:0;
+}
+.mono, .stat-value, .readout{
+  font-family:'IBM Plex Mono', 'SFMono-Regular', Menlo, monospace;
+  font-variant-numeric:tabular-nums;
+}
+.wrap{max-width:1040px;margin:0 auto;padding:0 1.5rem;}
+a{color:var(--accent);}
+
+/* ---------- Hero ---------- */
+.hero{padding:3.5rem 0 2rem;border-bottom:1px solid var(--line);}
+.eyebrow{
+  font-size:.72rem;letter-spacing:.11em;text-transform:uppercase;
+  color:var(--accent);font-weight:600;margin-bottom:.9rem;display:flex;align-items:center;gap:.5rem;
+}
+.eyebrow::before{content:"";width:1.5rem;height:1px;background:var(--accent);display:inline-block;}
+.hero h1{font-size:2.3rem;line-height:1.15;max-width:34ch;}
+.hero .byline{color:var(--ink-muted);font-size:.9rem;margin-top:.7rem;}
+.hero .question{
+  margin-top:1.6rem;font-size:1.15rem;font-family:'Source Serif 4',serif;font-style:italic;
+  color:var(--ink);max-width:56ch;border-left:2px solid var(--accent);padding-left:1rem;
+}
+.disclaimer{
+  margin-top:1.4rem;display:inline-flex;gap:.5rem;align-items:flex-start;
+  font-size:.82rem;color:var(--ink-muted);background:var(--surface-2);
+  border:1px solid var(--line);border-radius:var(--radius);padding:.6rem .85rem;max-width:62ch;
+}
+.disclaimer b{color:var(--ink);}
+
+/* ---------- Control rail ---------- */
+.rail{
+  position:sticky;top:0;z-index:40;background:color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter:blur(8px);border-bottom:1px solid var(--line);box-shadow:var(--shadow);
+}
+.rail-inner{
+  display:flex;flex-wrap:wrap;gap:1.4rem 2rem;align-items:center;padding:.85rem 1.5rem;max-width:1040px;margin:0 auto;
+}
+.rail-group{display:flex;align-items:center;gap:1.1rem;flex-wrap:wrap;}
+.field{display:flex;flex-direction:column;gap:.2rem;min-width:7.5rem;}
+.field label{font-size:.68rem;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-faint);font-weight:600;}
+.field .val{font-size:.85rem;color:var(--ink);}
+.field .val .unit{color:var(--ink-faint);font-weight:400;}
+input[type="range"]{
+  -webkit-appearance:none;appearance:none;width:9rem;height:3px;border-radius:2px;
+  background:var(--line-strong);outline:none;cursor:pointer;
+}
+input[type="range"]::-webkit-slider-thumb{
+  -webkit-appearance:none;width:13px;height:13px;border-radius:50%;background:var(--accent);
+  border:2px solid var(--surface);box-shadow:0 0 0 1px var(--accent);cursor:pointer;
+}
+input[type="range"]::-moz-range-thumb{
+  width:11px;height:11px;border-radius:50%;background:var(--accent);border:2px solid var(--surface);
+  box-shadow:0 0 0 1px var(--accent);cursor:pointer;
+}
+input[type="range"].day-slider{width:14rem;}
+.rail-divider{width:1px;align-self:stretch;background:var(--line);}
+.transport{display:flex;align-items:center;gap:.4rem;}
+.btn{
+  font-family:inherit;font-size:.78rem;font-weight:600;padding:.4rem .75rem;border-radius:var(--radius);
+  border:1px solid var(--line-strong);background:var(--surface);color:var(--ink);cursor:pointer;
+  transition:background .15s, border-color .15s;
+}
+.btn:hover{border-color:var(--accent);}
+.btn:focus-visible, input:focus-visible, select:focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);}
+.btn.ghost{border-color:transparent;background:transparent;color:var(--ink-muted);}
+.btn.ghost:hover{color:var(--ink);}
+.day-readout{font-size:.8rem;color:var(--ink-muted);white-space:nowrap;}
+.day-readout b{color:var(--ink);}
+
+/* ---------- Sections / views ---------- */
+.view{padding:3.4rem 0;border-bottom:1px solid var(--line);}
+.view:last-of-type{border-bottom:none;}
+.view-head{display:flex;gap:1rem;align-items:baseline;justify-content:space-between;flex-wrap:wrap;margin-bottom:.4rem;}
+.view-num{
+  font-family:'IBM Plex Mono',monospace;font-size:.75rem;color:var(--accent);font-weight:600;
+  letter-spacing:.05em;
+}
+.view h2{font-size:1.5rem;margin-top:.15rem;}
+.view .q{color:var(--ink-muted);font-size:.98rem;max-width:62ch;margin-top:.5rem;}
+.view-body{
+  margin-top:1.7rem;background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:1.6rem 1.8rem;
+}
+.view-foot{display:flex;justify-content:space-between;gap:1.5rem;flex-wrap:wrap;margin-top:1.1rem;}
+.why{font-size:.86rem;color:var(--ink-muted);max-width:50ch;}
+.why b{color:var(--ink);font-weight:600;}
+.connect{
+  font-size:.8rem;color:var(--accent);font-weight:600;display:flex;align-items:center;gap:.4rem;white-space:nowrap;
+}
+
+/* legend */
+.legend{display:flex;gap:1.2rem;flex-wrap:wrap;margin-bottom:1.1rem;}
+.legend .item{display:flex;align-items:center;gap:.45rem;font-size:.82rem;color:var(--ink-muted);}
+.swatch{width:11px;height:11px;border-radius:3px;display:inline-block;}
+
+/* view 1: population state */
+.pop-grid{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;max-width:420px;}
+.pop-icon{width:100%;aspect-ratio:1;border-radius:3px;cursor:default;transition:transform .15s;}
+.pop-icon:hover{transform:scale(1.15);}
+.pop-layout{display:flex;gap:2.2rem;flex-wrap:wrap;align-items:flex-start;}
+.pop-stats{display:flex;flex-direction:column;gap:.9rem;min-width:13rem;}
+.stat-row{display:flex;flex-direction:column;gap:.15rem;padding:.55rem .7rem;border-radius:var(--radius);border:1px solid var(--line);}
+.stat-row .label{font-size:.72rem;text-transform:uppercase;letter-spacing:.06em;color:var(--ink-faint);font-weight:600;}
+.stat-value{font-size:1.2rem;font-weight:600;}
+.stat-sub{font-size:.78rem;color:var(--ink-muted);}
+
+/* view 2: transmission */
+.flow-wrap{display:flex;justify-content:center;}
+.flow-note{text-align:center;font-size:.8rem;color:var(--ink-muted);margin-top:.9rem;}
+
+/* view 3: outbreak animation */
+.outbreak-head{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:.8rem;margin-bottom:1rem;}
+.outbreak-scale{font-size:.78rem;color:var(--ink-faint);}
+
+/* charts */
+.chart-wrap{position:relative;}
+svg{display:block;max-width:100%;height:auto;}
+.axis path, .axis line{stroke:var(--line-strong);}
+.axis text{fill:var(--ink-faint);font-family:'IBM Plex Mono',monospace;font-size:.68rem;}
+.grid line{stroke:var(--line);stroke-dasharray:2 3;}
+.grid path{stroke:none;}
+.tooltip{
+  position:absolute;pointer-events:none;background:var(--ink);color:var(--bg);
+  font-size:.76rem;padding:.5rem .65rem;border-radius:6px;line-height:1.45;
+  box-shadow:var(--shadow);transform:translate(-50%,-110%);white-space:nowrap;z-index:10;opacity:0;
+  transition:opacity .1s;
+}
+:root[data-theme="dark"] .tooltip, @media (prefers-color-scheme:dark){ .tooltip{} }
+.axis-label{font-size:.72rem;fill:var(--ink-faint);font-family:'IBM Plex Sans',sans-serif;}
+
+/* view 5 peak */
+.peak-badge{
+  display:inline-flex;gap:.5rem;align-items:center;background:var(--infected-soft);color:var(--infected);
+  border-radius:var(--radius);padding:.5rem .8rem;font-size:.85rem;font-weight:600;margin-top:1rem;
+}
+
+/* view 6 scenario */
+.scenario-grid{display:grid;grid-template-columns:1fr 1fr;gap:1.4rem;margin-bottom:1.4rem;}
+.scenario-card{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.1rem;}
+.scenario-card h3{font-size:.95rem;display:flex;align-items:center;gap:.5rem;}
+.dot{width:10px;height:10px;border-radius:50%;display:inline-block;}
+.scenario-card .field{min-width:0;margin-top:.7rem;}
+.scenario-card input[type=range]{width:100%;}
+table{width:100%;border-collapse:collapse;font-size:.85rem;margin-top:.5rem;}
+th,td{text-align:left;padding:.55rem .6rem;border-bottom:1px solid var(--line);}
+th{font-size:.7rem;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);font-weight:600;}
+td.num{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+
+/* verification */
+.verify-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:1rem;}
+.check{border:1px solid var(--line);border-radius:var(--radius);padding:1rem 1.1rem;}
+.check h3{font-size:.88rem;margin-bottom:.5rem;display:flex;justify-content:space-between;align-items:center;}
+.badge{font-size:.68rem;font-weight:700;letter-spacing:.04em;padding:.2rem .5rem;border-radius:99px;}
+.badge.pass{background:var(--recovered-soft);color:var(--pass);}
+.badge.fail{background:var(--infected-soft);color:var(--warn);}
+.check p{font-size:.82rem;color:var(--ink-muted);margin:.25rem 0 0;}
+
+footer{padding:2.6rem 0 4rem;color:var(--ink-muted);font-size:.84rem;}
+footer h3{font-size:.95rem;color:var(--ink);margin-bottom:.6rem;}
+footer .cols{display:grid;grid-template-columns:1fr 1fr;gap:2rem;}
+footer ol{margin:0;padding-left:1.2rem;}
+footer li{margin-bottom:.3rem;}
+
+@media (max-width:760px){
+  .pop-layout{flex-direction:column;}
+  .scenario-grid{grid-template-columns:1fr;}
+  footer .cols{grid-template-columns:1fr;}
+  .hero h1{font-size:1.8rem;}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none !important;animation:none !important;}
+}
+</style>
+
+<header class="hero">
+  <div class="wrap">
+    <div class="eyebrow">Dynamic Scientific Storytelling &middot; SIR Model</div>
+    <h1>Visualizing Epidemic Spread</h1>
+    <div class="byline">Skyler LaFisca &middot; CPS 5745 *02 &middot; Kean University</div>
+    <p class="question">How do transmission and recovery rates influence the size, timing, and shape of an epidemic?</p>
+    <div class="disclaimer">⚠ <span><b>Educational simulation</b> — this is a deterministic SIR model with illustrative parameters, not a prediction of any real disease or outbreak.</span></div>
+  </div>
+</header>
+
+<div class="rail" id="rail">
+  <div class="rail-inner">
+    <div class="rail-group">
+      <div class="field">
+        <label for="betaSlider">Transmission &beta;</label>
+        <input type="range" id="betaSlider" min="0.05" max="1.0" step="0.01" value="0.3">
+        <div class="val mono"><span id="betaVal">0.30</span> <span class="unit">day⁻¹</span></div>
+      </div>
+      <div class="field">
+        <label for="gammaSlider">Recovery &gamma;</label>
+        <input type="range" id="gammaSlider" min="0.02" max="0.5" step="0.01" value="0.1">
+        <div class="val mono"><span id="gammaVal">0.10</span> <span class="unit">day⁻¹</span></div>
+      </div>
+      <div class="field">
+        <label for="i0Slider">Initial infected</label>
+        <input type="range" id="i0Slider" min="1" max="50" step="1" value="10">
+        <div class="val mono"><span id="i0Val">10</span> <span class="unit">people</span></div>
+      </div>
+      <div class="field">
+        <label>R&#8320; (&beta;/&gamma;)</label>
+        <div class="val mono"><span id="r0Val">3.00</span></div>
+      </div>
+    </div>
+    <div class="rail-divider"></div>
+    <div class="rail-group">
+      <div class="transport">
+        <button class="btn primary" id="playBtn" aria-label="Play">▶ Play</button>
+        <button class="btn" id="stepBtn">Step</button>
+        <button class="btn ghost" id="resetBtn">Reset</button>
+      </div>
+      <input type="range" class="day-slider" id="daySlider" min="0" max="160" step="1" value="0">
+      <div class="day-readout">Day <b id="dayVal">0</b> / <span id="dayMax">160</span></div>
+    </div>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <!-- VIEW 1 -->
+  <section class="view" id="view1">
+    <div class="view-head">
+      <div>
+        <div class="view-num">VIEW 01 — BEGINNING</div>
+        <h2>Population State</h2>
+      </div>
+    </div>
+    <p class="q">What portion of the population is susceptible, infected, or recovered right now?</p>
+    <div class="view-body">
+      <div class="legend">
+        <span class="item"><span class="swatch" style="background:var(--susceptible)"></span>Susceptible</span>
+        <span class="item"><span class="swatch" style="background:var(--infected)"></span>Infected</span>
+        <span class="item"><span class="swatch" style="background:var(--recovered)"></span>Recovered</span>
+      </div>
+      <div class="pop-layout">
+        <div>
+          <div class="pop-grid" id="popGrid"></div>
+          <div class="flow-note" style="text-align:left;margin-top:.8rem;">Each tile &asymp; 2% of the population &middot; hover a tile for exact figures</div>
+        </div>
+        <div class="pop-stats" id="popStats"></div>
+      </div>
+    </div>
+    <div class="view-foot">
+      <div class="why"><b>Why it fits:</b> seeing people as three groups — before any equation — builds the vocabulary the rest of the story relies on.</div>
+      <div class="connect">→ driven by the Day control above</div>
+    </div>
+  </section>
+
+  <!-- VIEW 2 -->
+  <section class="view" id="view2">
+    <div class="view-head">
+      <div>
+        <div class="view-num">VIEW 02 — MIDDLE</div>
+        <h2>Transmission Mechanism</h2>
+      </div>
+    </div>
+    <p class="q">How does a person move between susceptible, infected, and recovered?</p>
+    <div class="view-body">
+      <div class="flow-wrap">
+        <svg id="flowSvg" viewBox="0 0 680 160" width="680"></svg>
+      </div>
+      <div class="flow-note">Adjust &beta; and &gamma; in the control panel — every view below recalculates instantly.</div>
+    </div>
+    <div class="view-foot">
+      <div class="why"><b>Why it fits:</b> a flow diagram ties the abstract rate parameters directly to the disease-transmission mechanism they govern.</div>
+      <div class="connect">→ produces the outbreak animated in View 3</div>
+    </div>
+  </section>
+
+  <!-- VIEW 3 -->
+  <section class="view" id="view3">
+    <div class="view-head">
+      <div>
+        <div class="view-num">VIEW 03 — MIDDLE</div>
+        <h2>Animated Outbreak</h2>
+      </div>
+    </div>
+    <p class="q">What does the simulated outbreak look like as time progresses through the population?</p>
+    <div class="view-body">
+      <div class="outbreak-head">
+        <div class="legend" style="margin-bottom:0;">
+          <span class="item"><span class="swatch" style="background:var(--susceptible)"></span>Susceptible</span>
+          <span class="item"><span class="swatch" style="background:var(--infected)"></span>Infected</span>
+          <span class="item"><span class="swatch" style="background:var(--recovered)"></span>Recovered</span>
+        </div>
+        <div class="outbreak-scale" id="outbreakScale">1 dot ≈ 4 people</div>
+      </div>
+      <svg id="outbreakSvg" viewBox="0 0 680 340" width="680"></svg>
+    </div>
+    <div class="view-foot">
+      <div class="why"><b>Why it fits:</b> animation makes the time-dependent nature of an epidemic visible, rather than only showing a final outcome.</div>
+      <div class="connect">→ matches the numerical curve in View 4</div>
+    </div>
+  </section>
+
+  <!-- VIEW 4 -->
+  <section class="view" id="view4">
+    <div class="view-head">
+      <div>
+        <div class="view-num">VIEW 04 — MIDDLE</div>
+        <h2>SIR Curves</h2>
+      </div>
+    </div>
+    <p class="q">How do the three populations change over time, on the same scale?</p>
+    <div class="view-body">
+      <div class="legend">
+        <span class="item"><span class="swatch" style="background:var(--susceptible)"></span>Susceptible S(t)</span>
+        <span class="item"><span class="swatch" style="background:var(--infected)"></span>Infected I(t)</span>
+        <span class="item"><span class="swatch" style="background:var(--recovered)"></span>Recovered R(t)</span>
+      </div>
+      <div class="chart-wrap">
+        <svg id="curvesSvg" viewBox="0 0 680 340" width="680"></svg>
+        <div class="tooltip" id="curvesTooltip"></div>
+      </div>
+      <div class="flow-note">Hover to inspect a day &middot; click the chart to move the Day control</div>
+    </div>
+    <div class="view-foot">
+      <div class="why"><b>Why it fits:</b> a line chart is the honest way to show continuous change, and lets all three populations be compared on one time axis.</div>
+      <div class="connect">→ the infected curve is examined closely in View 5</div>
+    </div>
+  </section>
+
+  <!-- VIEW 5 -->
+  <section class="view" id="view5">
+    <div class="view-head">
+      <div>
+        <div class="view-num">VIEW 05 — ENDING</div>
+        <h2>Epidemic Peak</h2>
+      </div>
+    </div>
+    <p class="q">When does the number of infected people reach its maximum?</p>
+    <div class="view-body">
+      <div class="chart-wrap">
+        <svg id="peakSvg" viewBox="0 0 680 300" width="680"></svg>
+        <div class="tooltip" id="peakTooltip"></div>
+      </div>
+      <div class="peak-badge" id="peakBadge">Peak —</div>
+    </div>
+    <div class="view-foot">
+      <div class="why"><b>Why it fits:</b> isolating the infected curve makes the rise, peak, and decline easy to read at a glance.</div>
+      <div class="connect">→ compared across scenarios in View 6</div>
+    </div>
+  </section>
+
+  <!-- VIEW 6 -->
+  <section class="view" id="view6">
+    <div class="view-head">
+      <div>
+        <div class="view-num">VIEW 06 — ENDING</div>
+        <h2>Scenario Comparison</h2>
+      </div>
+    </div>
+    <p class="q">How do different transmission and recovery rates change the shape of the epidemic?</p>
+    <div class="view-body">
+      <div class="scenario-grid">
+        <div class="scenario-card">
+          <h3><span class="dot" style="background:var(--accent)"></span>Scenario A</h3>
+          <div class="field">
+            <label for="aBeta">&beta; transmission</label>
+            <input type="range" id="aBeta" min="0.05" max="1.0" step="0.01" value="0.3">
+            <div class="val mono"><span id="aBetaVal">0.30</span></div>
+          </div>
+          <div class="field">
+            <label for="aGamma">&gamma; recovery</label>
+            <input type="range" id="aGamma" min="0.02" max="0.5" step="0.01" value="0.1">
+            <div class="val mono"><span id="aGammaVal">0.10</span></div>
+          </div>
+        </div>
+        <div class="scenario-card">
+          <h3><span class="dot" style="background:var(--infected)"></span>Scenario B</h3>
+          <div class="field">
+            <label for="bBeta">&beta; transmission</label>
+            <input type="range" id="bBeta" min="0.05" max="1.0" step="0.01" value="0.55">
+            <div class="val mono"><span id="bBetaVal">0.55</span></div>
+          </div>
+          <div class="field">
+            <label for="bGamma">&gamma; recovery</label>
+            <input type="range" id="bGamma" min="0.02" max="0.5" step="0.01" value="0.15">
+            <div class="val mono"><span id="bGammaVal">0.15</span></div>
+          </div>
+        </div>
+      </div>
+      <div class="chart-wrap">
+        <svg id="scenarioSvg" viewBox="0 0 680 300" width="680"></svg>
+      </div>
+      <table id="scenarioTable">
+        <thead><tr><th>Metric</th><th>Scenario A</th><th>Scenario B</th></tr></thead>
+        <tbody></tbody>
+      </table>
+      <div style="margin-top:.9rem;"><button class="btn ghost" id="scenarioReset">Reset scenarios</button></div>
+    </div>
+    <div class="view-foot">
+      <div class="why"><b>Why it fits:</b> a direct side-by-side comparison shows how parameters change peak size, timing, and final outcome.</div>
+      <div class="connect">→ completes the six-view story</div>
+    </div>
+  </section>
+
+  <!-- VERIFICATION -->
+  <section class="view" id="verify" style="border-bottom:none;">
+    <div class="view-head">
+      <div>
+        <div class="view-num">VERIFICATION</div>
+        <h2>Numerical &amp; Boundary Checks</h2>
+      </div>
+    </div>
+    <p class="q">Live checks against the current parameters, re-run on every change.</p>
+    <div class="view-body">
+      <div class="verify-grid" id="verifyGrid"></div>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="wrap">
+    <div class="cols">
+      <div>
+        <h3>Model</h3>
+        <p class="mono" style="font-size:.8rem;">dS/dt = &minus;&beta;SI/N &nbsp;&middot;&nbsp; dI/dt = &beta;SI/N &minus; &gamma;I &nbsp;&middot;&nbsp; dR/dt = &gamma;I</p>
+        <p>Closed population, homogeneous mixing, no births/deaths/migration. Integrated with 4th-order Runge–Kutta, 8 substeps/day.</p>
+      </div>
+      <div>
+        <h3>References</h3>
+        <ol>
+          <li>Kermack &amp; McKendrick, "A contribution to the mathematical theory of epidemics," <i>Proc. R. Soc. A</i>, 1927.</li>
+          <li>CDC, "How to Read an Epi Curve."</li>
+          <li>HHMI BioInteractive, "Modeling Disease Spread."</li>
+        </ol>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js"></script>
+<script>
+(function(){
+  "use strict";
+  var N = 1000;
+  var W = 680, H4 = 340, H5 = 300, H6 = 300;
+  var margin = {top:16, right:20, bottom:36, left:52};
+
+  var state = {
+    beta: 0.3, gamma: 0.1, I0: 10,
+    day: 0, playing: false, timer: null,
+    series: [], maxDay: 160
+  };
+  var scenario = {
+    A: {beta:0.3, gamma:0.1, series:[]},
+    B: {beta:0.55, gamma:0.15, series:[]}
+  };
+
+  // ---------- simulation ----------
+  function deriv(S,I,beta,gamma){
+    return [ -beta*S*I/N, beta*S*I/N - gamma*I, gamma*I ];
+  }
+  function simulate(beta, gamma, I0, days, stepsPerDay){
+    days = days || 300; stepsPerDay = stepsPerDay || 8;
+    var dt = 1/stepsPerDay;
+    var S = N - I0, I = I0, R = 0;
+    var series = [{day:0,S:S,I:I,R:R}];
+    for (var d=1; d<=days; d++){
+      for (var s=0; s<stepsPerDay; s++){
+        var k1 = deriv(S,I,beta,gamma);
+        var k2 = deriv(S+k1[0]*dt/2, I+k1[1]*dt/2, beta, gamma);
+        var k3 = deriv(S+k2[0]*dt/2, I+k2[1]*dt/2, beta, gamma);
+        var k4 = deriv(S+k3[0]*dt, I+k3[1]*dt, beta, gamma);
+        S += dt/6*(k1[0]+2*k2[0]+2*k3[0]+k4[0]);
+        I += dt/6*(k1[1]+2*k2[1]+2*k3[1]+k4[1]);
+        R += dt/6*(k1[2]+2*k2[2]+2*k3[2]+k4[2]);
+        if (S<0) S=0; if (I<0) I=0; if (R<0) R=0;
+      }
+      series.push({day:d, S:S, I:I, R:R});
+    }
+    return series;
+  }
+  function trim(series){
+    var peakIdx = 0;
+    for (var i=1;i<series.length;i++) if (series[i].I>series[peakIdx].I) peakIdx=i;
+    var endIdx = series.length-1;
+    for (var j=peakIdx;j<series.length;j++){ if (series[j].I<0.5){ endIdx=Math.min(series.length-1, j+6); break; } }
+    endIdx = Math.max(endIdx, 30);
+    return series.slice(0, endIdx+1);
+  }
+  function peakInfo(series){
+    var idx=0; for (var i=1;i<series.length;i++) if (series[i].I>series[idx].I) idx=i;
+    return {day: series[idx].day, I: series[idx].I};
+  }
+
+  function recompute(){
+    var full = simulate(state.beta, state.gamma, state.I0, 300, 8);
+    state.series = trim(full);
+    state.maxDay = state.series.length - 1;
+    document.getElementById('dayMax').textContent = state.maxDay;
+    daySlider.attr('max', state.maxDay);
+    if (state.day > state.maxDay){ state.day = state.maxDay; }
+    renderAll();
+  }
+
+  // ---------- rail wiring ----------
+  var betaSlider = document.getElementById('betaSlider');
+  var gammaSlider = document.getElementById('gammaSlider');
+  var i0Slider = document.getElementById('i0Slider');
+  var daySliderEl = document.getElementById('daySlider');
+  var daySlider = d3.select(daySliderEl);
+
+  function fmt2(x){ return x.toFixed(2); }
+
+  betaSlider.addEventListener('input', function(){
+    state.beta = +betaSlider.value;
+    document.getElementById('betaVal').textContent = fmt2(state.beta);
+    document.getElementById('r0Val').textContent = fmt2(state.beta/state.gamma);
+    recompute();
+  });
+  gammaSlider.addEventListener('input', function(){
+    state.gamma = +gammaSlider.value;
+    document.getElementById('gammaVal').textContent = fmt2(state.gamma);
+    document.getElementById('r0Val').textContent = fmt2(state.beta/state.gamma);
+    recompute();
+  });
+  i0Slider.addEventListener('input', function(){
+    state.I0 = +i0Slider.value;
+    document.getElementById('i0Val').textContent = state.I0;
+    recompute();
+  });
+  daySliderEl.addEventListener('input', function(){
+    state.day = +daySliderEl.value;
+    pause();
+    renderDayDependent();
+  });
+
+  var playBtn = document.getElementById('playBtn');
+  var stepBtn = document.getElementById('stepBtn');
+  var resetBtn = document.getElementById('resetBtn');
+
+  function play(){
+    if (state.playing) return;
+    if (state.day >= state.maxDay) state.day = 0;
+    state.playing = true;
+    playBtn.textContent = '⏸ Pause';
+    state.timer = setInterval(function(){
+      state.day++;
+      if (state.day >= state.maxDay){ state.day = state.maxDay; pause(); }
+      daySliderEl.value = state.day;
+      renderDayDependent();
+    }, 140);
+  }
+  function pause(){
+    state.playing = false;
+    playBtn.textContent = '▶ Play';
+    if (state.timer){ clearInterval(state.timer); state.timer = null; }
+  }
+  playBtn.addEventListener('click', function(){ state.playing ? pause() : play(); });
+  stepBtn.addEventListener('click', function(){
+    pause();
+    state.day = Math.min(state.maxDay, state.day+1);
+    daySliderEl.value = state.day;
+    renderDayDependent();
+  });
+  resetBtn.addEventListener('click', function(){
+    pause();
+    state.day = 0;
+    daySliderEl.value = 0;
+    renderDayDependent();
+  });
+
+  // ---------- view 1: population state ----------
+  var TILES = 50;
+  var popGrid = d3.select('#popGrid');
+  function renderPopulation(){
+    var d = state.series[state.day];
+    var pct = {S: d.S/N*100, I: d.I/N*100, R: d.R/N*100};
+    var nS = Math.round(pct.S/100*TILES);
+    var nI = Math.round(pct.I/100*TILES);
+    var nR = TILES - nS - nI;
+    var tiles = [];
+    for (var i=0;i<nS;i++) tiles.push('S');
+    for (var j=0;j<nI;j++) tiles.push('I');
+    for (var k=0;k<Math.max(0,nR);k++) tiles.push('R');
+    while (tiles.length < TILES) tiles.push('R');
+    tiles = tiles.slice(0, TILES);
+
+    var colorOf = {S:'var(--susceptible)', I:'var(--infected)', R:'var(--recovered)'};
+    var nameOf = {S:'Susceptible', I:'Infected', R:'Recovered'};
+
+    var countOf = {S:d.S, I:d.I, R:d.R};
+    var sel = popGrid.selectAll('div.pop-icon').data(tiles);
+    sel.exit().remove();
+    sel.enter().append('div').attr('class','pop-icon')
+      .merge(sel)
+      .style('background', function(t){ return colorOf[t]; })
+      .attr('title', function(t){
+        return nameOf[t] + ': ' + Math.round(countOf[t]).toLocaleString() + ' people (' + (countOf[t]/N*100).toFixed(1) + '%)';
+      });
+
+    var stats = d3.select('#popStats');
+    var rows = stats.selectAll('.stat-row').data(['S','I','R']);
+    var entered = rows.enter().append('div').attr('class','stat-row');
+    entered.append('div').attr('class','label');
+    entered.append('div').attr('class','stat-value');
+    entered.append('div').attr('class','stat-sub');
+    var merged = entered.merge(rows);
+    merged.style('border-left', function(t){ return '4px solid ' + colorOf[t]; });
+    merged.select('.label').text(function(t){ return nameOf[t]; });
+    merged.select('.stat-value').style('color', function(t){return colorOf[t];}).text(function(t){
+      var v = t==='S'?d.S : t==='I'?d.I : d.R;
+      return Math.round(v).toLocaleString() + ' people';
+    });
+    merged.select('.stat-sub').text(function(t){
+      var v = t==='S'?d.S : t==='I'?d.I : d.R;
+      return (v/N*100).toFixed(1) + '% of population · day ' + d.day;
+    });
+  }
+
+  // ---------- view 2: transmission flow ----------
+  var flowSvg = d3.select('#flowSvg');
+  function renderFlow(){
+    flowSvg.selectAll('*').remove();
+    var boxes = [
+      {x:10, label:'Susceptible', color:'var(--susceptible)', sub:'S'},
+      {x:255, label:'Infected', color:'var(--infected)', sub:'I'},
+      {x:500, label:'Recovered', color:'var(--recovered)', sub:'R'}
+    ];
+    var bw=170, bh=64, by=48;
+    boxes.forEach(function(b){
+      var g = flowSvg.append('g');
+      g.append('rect').attr('x', b.x).attr('y', by).attr('width', bw).attr('height', bh)
+        .attr('rx', 6).attr('fill', 'none').attr('stroke', b.color).attr('stroke-width', 2);
+      g.append('text').attr('x', b.x+bw/2).attr('y', by+bh/2-4).attr('text-anchor','middle')
+        .attr('font-family', "'Source Serif 4', serif").attr('font-size', 15).attr('fill','var(--ink)').text(b.label);
+      g.append('text').attr('x', b.x+bw/2).attr('y', by+bh/2+16).attr('text-anchor','middle')
+        .attr('font-family', "'IBM Plex Mono', monospace").attr('font-size', 11).attr('fill','var(--ink-faint)').text(b.sub+'(t)');
+    });
+    function arrow(x1,x2,y,rate,label,id){
+      var g = flowSvg.append('g');
+      g.append('line').attr('x1',x1).attr('x2',x2).attr('y1',y).attr('y2',y)
+        .attr('stroke','var(--ink-faint)').attr('stroke-width',1.5)
+        .attr('stroke-dasharray','5 4').attr('class','flow-arrow-'+id);
+      g.append('path').attr('d','M'+(x2-8)+','+(y-5)+' L'+x2+','+y+' L'+(x2-8)+','+(y+5))
+        .attr('fill','none').attr('stroke','var(--ink-faint)').attr('stroke-width',1.5);
+      g.append('text').attr('x',(x1+x2)/2).attr('y',y-10).attr('text-anchor','middle')
+        .attr('font-family',"'IBM Plex Mono', monospace").attr('font-size',12).attr('fill','var(--accent)')
+        .text(label+' = '+rate.toFixed(2));
+    }
+    arrow(180, 255, by+bh/2, state.beta, 'β');
+    arrow(425, 500, by+bh/2, state.gamma, 'γ');
+
+    var reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (!reduce){
+      flowSvg.selectAll('line').each(function(){
+        var el = d3.select(this);
+        (function loop(){
+          el.transition().duration(1200).ease(d3.easeLinear)
+            .styleTween('stroke-dashoffset', function(){ return d3.interpolate(0, -18); })
+            .on('end', loop);
+        })();
+      });
+    }
+  }
+
+  // ---------- view 3: outbreak animation ----------
+  var GRID_COLS = 24, GRID_ROWS = 10, DOTS = GRID_COLS*GRID_ROWS;
+  var permutation;
+  (function(){
+    var seed = 1337;
+    function rnd(){ seed = (seed*9301+49297) % 233280; return seed/233280; }
+    permutation = d3.range(DOTS);
+    for (var i=permutation.length-1;i>0;i--){
+      var j = Math.floor(rnd()*(i+1));
+      var tmp = permutation[i]; permutation[i]=permutation[j]; permutation[j]=tmp;
+    }
+  })();
+  var rank = new Array(DOTS);
+  permutation.forEach(function(p,idx){ rank[p]=idx; });
+
+  var outbreakSvg = d3.select('#outbreakSvg');
+  var dotR = 11, padX = 16, padY = 16;
+  var cellW = (W - padX*2) / GRID_COLS;
+  var cellH = (300 - padY*2) / GRID_ROWS;
+  var dotData = d3.range(DOTS).map(function(i){
+    return { i:i, cx: padX + cellW*(i%GRID_COLS) + cellW/2, cy: padY + cellH*Math.floor(i/GRID_COLS) + cellH/2 };
+  });
+  outbreakSvg.selectAll('circle.dot3')
+    .data(dotData).enter().append('circle').attr('class','dot3')
+    .attr('cx', function(d){return d.cx;}).attr('cy', function(d){return d.cy;})
+    .attr('r', dotR*0.42).attr('fill', 'var(--susceptible)');
+
+  function renderOutbreak(){
+    var d = state.series[state.day];
+    var nS = Math.round(d.S/N*DOTS);
+    var nI = Math.round(d.I/N*DOTS);
+    var nR = DOTS - nS - nI;
+    document.getElementById('outbreakScale').textContent = '1 dot ≈ ' + Math.round(N/DOTS) + ' people';
+    outbreakSvg.selectAll('circle.dot3')
+      .transition().duration(120)
+      .attr('fill', function(dd){
+        var r = rank[dd.i];
+        if (r < nS) return 'var(--susceptible)';
+        if (r < nS+nI) return 'var(--infected)';
+        return 'var(--recovered)';
+      });
+  }
+
+  // ---------- shared line-chart builder ----------
+  function makeScales(series, w, h, m, keys){
+    var x = d3.scaleLinear().domain([0, d3.max(series, function(d){return d.day;})]).range([m.left, w-m.right]);
+    var maxY = 0;
+    series.forEach(function(d){ keys.forEach(function(k){ if (d[k]>maxY) maxY=d[k]; }); });
+    var y = d3.scaleLinear().domain([0, maxY*1.08]).range([h-m.bottom, m.top]);
+    return {x:x,y:y};
+  }
+  function drawAxes(svg, scales, w, h, m, yLabel){
+    svg.selectAll('.axis').remove();
+    svg.selectAll('.grid').remove();
+    svg.selectAll('.axis-label').remove();
+    svg.append('g').attr('class','grid')
+      .attr('transform','translate('+m.left+',0)')
+      .call(d3.axisLeft(scales.y).tickSize(-(w-m.left-m.right)).tickFormat('').ticks(5));
+    svg.append('g').attr('class','axis')
+      .attr('transform','translate(0,'+(h-m.bottom)+')')
+      .call(d3.axisBottom(scales.x).ticks(6));
+    svg.append('g').attr('class','axis')
+      .attr('transform','translate('+m.left+',0)')
+      .call(d3.axisLeft(scales.y).ticks(5).tickFormat(d3.format('~s')));
+    svg.append('text').attr('class','axis-label')
+      .attr('x', (w+m.left-m.right)/2).attr('y', h-4).attr('text-anchor','middle')
+      .text('Day');
+    svg.append('text').attr('class','axis-label')
+      .attr('transform','rotate(-90)')
+      .attr('x', -(h)/2).attr('y', 14).attr('text-anchor','middle')
+      .text(yLabel);
+  }
+
+  // ---------- view 4: SIR curves ----------
+  var curvesSvg = d3.select('#curvesSvg');
+  var curvesTooltip = d3.select('#curvesTooltip');
+  var cursorG4 = null;
+  function renderCurves(){
+    var series = state.series;
+    var scales = makeScales(series, W, H4, margin, ['S','I','R']);
+    drawAxes(curvesSvg, scales, W, H4, margin, 'People');
+
+    var lineGen = function(key){
+      return d3.line().x(function(d){return scales.x(d.day);}).y(function(d){return scales.y(d[key]);});
+    };
+    curvesSvg.selectAll('.series-line').remove();
+    [['S','var(--susceptible)'],['I','var(--infected)'],['R','var(--recovered)']].forEach(function(pair){
+      curvesSvg.append('path').datum(series).attr('class','series-line')
+        .attr('fill','none').attr('stroke', pair[1]).attr('stroke-width', 2.2)
+        .attr('d', lineGen(pair[0]));
+    });
+
+    curvesSvg.selectAll('.overlay').remove();
+    var overlay = curvesSvg.append('rect').attr('class','overlay')
+      .attr('x', margin.left).attr('y', margin.top)
+      .attr('width', W-margin.left-margin.right).attr('height', H4-margin.top-margin.bottom)
+      .attr('fill','transparent').style('cursor','crosshair');
+
+    curvesSvg.selectAll('.focus-line').remove();
+    cursorG4 = curvesSvg.append('line').attr('class','focus-line')
+      .attr('y1', margin.top).attr('y2', H4-margin.bottom)
+      .attr('stroke','var(--ink-faint)').attr('stroke-width', 1);
+
+    overlay.on('mousemove', function(event){
+      var mx = d3.pointer(event, this)[0];
+      var day = Math.round(scales.x.invert(mx));
+      day = Math.max(0, Math.min(series.length-1, day));
+      var d = series[day];
+      cursorG4.attr('x1', scales.x(day)).attr('x2', scales.x(day)).style('opacity',1);
+      curvesTooltip
+        .style('left', scales.x(day)+'px').style('top', margin.top+'px').style('opacity',1)
+        .html('<b>Day '+day+'</b><br>S: '+Math.round(d.S)+'<br>I: '+Math.round(d.I)+'<br>R: '+Math.round(d.R));
+    }).on('mouseleave', function(){
+      curvesTooltip.style('opacity',0);
+      if (state.day!==undefined) cursorG4.attr('x1', scales.x(state.day)).attr('x2', scales.x(state.day));
+    }).on('click', function(event){
+      var mx = d3.pointer(event, this)[0];
+      var day = Math.round(scales.x.invert(mx));
+      day = Math.max(0, Math.min(series.length-1, day));
+      pause();
+      state.day = day;
+      daySliderEl.value = day;
+      renderDayDependent();
+    });
+
+    cursorG4.attr('x1', scales.x(state.day)).attr('x2', scales.x(state.day)).style('opacity',0.6);
+  }
+  function updateCurveCursor(){
+    if (!cursorG4 || !state.series.length) return;
+    var scales = makeScales(state.series, W, H4, margin, ['S','I','R']);
+    cursorG4.attr('x1', scales.x(state.day)).attr('x2', scales.x(state.day)).style('opacity',0.6);
+  }
+
+  // ---------- view 5: peak ----------
+  var peakSvg = d3.select('#peakSvg');
+  var peakTooltip = d3.select('#peakTooltip');
+  var cursorG5 = null;
+  function renderPeak(){
+    var series = state.series;
+    var scales = makeScales(series, W, H5, margin, ['I']);
+    drawAxes(peakSvg, scales, W, H5, margin, 'Infected');
+
+    peakSvg.selectAll('.area5').remove();
+    var area = d3.area().x(function(d){return scales.x(d.day);}).y0(scales.y(0)).y1(function(d){return scales.y(d.I);});
+    peakSvg.append('path').datum(series).attr('class','area5')
+      .attr('fill','var(--infected-soft)').attr('d', area);
+
+    peakSvg.selectAll('.line5').remove();
+    var line = d3.line().x(function(d){return scales.x(d.day);}).y(function(d){return scales.y(d.I);});
+    peakSvg.append('path').datum(series).attr('class','line5')
+      .attr('fill','none').attr('stroke','var(--infected)').attr('stroke-width',2.4).attr('d', line);
+
+    var pk = peakInfo(series);
+    peakSvg.selectAll('.peak-dot').remove();
+    peakSvg.append('circle').attr('class','peak-dot')
+      .attr('cx', scales.x(pk.day)).attr('cy', scales.y(pk.I)).attr('r', 5)
+      .attr('fill','var(--infected)').attr('stroke','var(--surface)').attr('stroke-width',2);
+    peakSvg.selectAll('.peak-label').remove();
+    peakSvg.append('text').attr('class','peak-label')
+      .attr('x', scales.x(pk.day)).attr('y', scales.y(pk.I)-12).attr('text-anchor','middle')
+      .attr('font-family',"'IBM Plex Mono', monospace").attr('font-size', 11).attr('fill','var(--infected)')
+      .text('Peak: '+Math.round(pk.I)+' on day '+pk.day);
+
+    document.getElementById('peakBadge').textContent =
+      'Peak infected: ' + Math.round(pk.I).toLocaleString() + ' people on day ' + pk.day +
+      ' (' + (pk.I/N*100).toFixed(1) + '% of population)';
+
+    peakSvg.selectAll('.overlay5').remove();
+    var overlay = peakSvg.append('rect').attr('class','overlay5')
+      .attr('x', margin.left).attr('y', margin.top)
+      .attr('width', W-margin.left-margin.right).attr('height', H5-margin.top-margin.bottom)
+      .attr('fill','transparent').style('cursor','crosshair');
+
+    peakSvg.selectAll('.focus-line5').remove();
+    cursorG5 = peakSvg.append('line').attr('class','focus-line5')
+      .attr('y1', margin.top).attr('y2', H5-margin.bottom)
+      .attr('stroke','var(--ink-faint)').attr('stroke-width',1);
+
+    overlay.on('mousemove', function(event){
+      var mx = d3.pointer(event, this)[0];
+      var day = Math.round(scales.x.invert(mx));
+      day = Math.max(0, Math.min(series.length-1, day));
+      var d = series[day];
+      cursorG5.attr('x1', scales.x(day)).attr('x2', scales.x(day)).style('opacity',1);
+      peakTooltip.style('left', scales.x(day)+'px').style('top', margin.top+'px').style('opacity',1)
+        .html('<b>Day '+day+'</b><br>Infected: '+Math.round(d.I));
+    }).on('mouseleave', function(){
+      peakTooltip.style('opacity',0);
+      cursorG5.style('opacity',0);
+    });
+  }
+
+  // ---------- view 6: scenario comparison ----------
+  var scenarioSvg = d3.select('#scenarioSvg');
+  function wireScenario(prefix, key){
+    var betaEl = document.getElementById(prefix+'Beta');
+    var gammaEl = document.getElementById(prefix+'Gamma');
+    betaEl.addEventListener('input', function(){
+      scenario[key].beta = +betaEl.value;
+      document.getElementById(prefix+'BetaVal').textContent = fmt2(scenario[key].beta);
+      recomputeScenario();
+    });
+    gammaEl.addEventListener('input', function(){
+      scenario[key].gamma = +gammaEl.value;
+      document.getElementById(prefix+'GammaVal').textContent = fmt2(scenario[key].gamma);
+      recomputeScenario();
+    });
+  }
+  wireScenario('a','A');
+  wireScenario('b','B');
+  document.getElementById('scenarioReset').addEventListener('click', function(){
+    scenario.A.beta=0.3; scenario.A.gamma=0.1;
+    scenario.B.beta=0.55; scenario.B.gamma=0.15;
+    document.getElementById('aBeta').value=0.3; document.getElementById('aBetaVal').textContent='0.30';
+    document.getElementById('aGamma').value=0.1; document.getElementById('aGammaVal').textContent='0.10';
+    document.getElementById('bBeta').value=0.55; document.getElementById('bBetaVal').textContent='0.55';
+    document.getElementById('bGamma').value=0.15; document.getElementById('bGammaVal').textContent='0.15';
+    recomputeScenario();
+  });
+
+  function recomputeScenario(){
+    scenario.A.series = trim(simulate(scenario.A.beta, scenario.A.gamma, state.I0, 300, 8));
+    scenario.B.series = trim(simulate(scenario.B.beta, scenario.B.gamma, state.I0, 300, 8));
+    renderScenario();
+  }
+
+  function renderScenario(){
+    var sA = scenario.A.series, sB = scenario.B.series;
+    var maxDay = Math.max(sA[sA.length-1].day, sB[sB.length-1].day);
+    var combined = sA.concat(sB);
+    var scales = makeScales(combined, W, H6, margin, ['I']);
+    scales.x = d3.scaleLinear().domain([0, maxDay]).range([margin.left, W-margin.right]);
+    drawAxes(scenarioSvg, scales, W, H6, margin, 'Infected');
+
+    var line = d3.line().x(function(d){return scales.x(d.day);}).y(function(d){return scales.y(d.I);});
+    scenarioSvg.selectAll('.scen-line').remove();
+    scenarioSvg.append('path').datum(sA).attr('class','scen-line')
+      .attr('fill','none').attr('stroke','var(--accent)').attr('stroke-width',2.4).attr('d', line);
+    scenarioSvg.append('path').datum(sB).attr('class','scen-line')
+      .attr('fill','none').attr('stroke','var(--infected)').attr('stroke-width',2.4)
+      .attr('stroke-dasharray','6 4').attr('d', line);
+
+    var pkA = peakInfo(sA), pkB = peakInfo(sB);
+    var r0A = scenario.A.beta/scenario.A.gamma, r0B = scenario.B.beta/scenario.B.gamma;
+    var finalRA = sA[sA.length-1].R, finalRB = sB[sB.length-1].R;
+
+    var rows = [
+      ['R₀ (β/γ)', r0A.toFixed(2), r0B.toFixed(2)],
+      ['Peak infected', Math.round(pkA.I).toLocaleString(), Math.round(pkB.I).toLocaleString()],
+      ['Peak day', pkA.day, pkB.day],
+      ['Final recovered', Math.round(finalRA).toLocaleString(), Math.round(finalRB).toLocaleString()]
+    ];
+    var tbody = d3.select('#scenarioTable tbody');
+    var tr = tbody.selectAll('tr').data(rows);
+    tr.exit().remove();
+    var trEnter = tr.enter().append('tr');
+    trEnter.append('td');
+    trEnter.append('td').attr('class','num');
+    trEnter.append('td').attr('class','num');
+    var trAll = trEnter.merge(tr);
+    trAll.select('td:nth-child(1)').text(function(d){return d[0];});
+    trAll.select('td:nth-child(2)').text(function(d){return d[1];});
+    trAll.select('td:nth-child(3)').text(function(d){return d[2];});
+  }
+
+  // ---------- verification ----------
+  function renderVerification(){
+    var series = state.series;
+    var maxEps = 0;
+    series.forEach(function(d){ maxEps = Math.max(maxEps, Math.abs(N-(d.S+d.I+d.R))); });
+    var consPass = maxEps < 0.01;
+
+    var betaZero = trim(simulate(0, state.gamma, state.I0, 200, 8));
+    var nonIncreasing = true, sConstant = true;
+    for (var i=1;i<betaZero.length;i++){
+      if (betaZero[i].I > betaZero[i-1].I + 1e-6) nonIncreasing = false;
+      if (Math.abs(betaZero[i].S - betaZero[0].S) > 1e-6) sConstant = false;
+    }
+    var b0Pass = nonIncreasing && sConstant;
+
+    var i0Zero = trim(simulate(state.beta, state.gamma, 0, 200, 8));
+    var noOutbreak = true;
+    for (var j=0;j<i0Zero.length;j++){ if (i0Zero[j].I > 1e-6) noOutbreak = false; }
+    var i0Pass = noOutbreak;
+
+    var checks = [
+      {
+        title:'Population conservation', pass: consPass,
+        body: 'max |N − (S+I+R)| = ' + maxEps.toExponential(2) + ' people across the simulated horizon (tolerance 0.01).'
+      },
+      {
+        title:'Boundary case: β = 0', pass: b0Pass,
+        body: 'With transmission off, susceptible stayed constant and infections only declined — no new infections occurred.'
+      },
+      {
+        title:'Boundary case: I(0) ≈ 0', pass: i0Pass,
+        body: 'With no initial infections, the infected curve never rose above 1 person — no epidemic was generated.'
+      }
+    ];
+
+    var grid = d3.select('#verifyGrid');
+    var sel = grid.selectAll('.check').data(checks);
+    var entered = sel.enter().append('div').attr('class','check');
+    entered.append('h3');
+    entered.append('p');
+    var merged = entered.merge(sel);
+    merged.select('h3').html(function(d){
+      return d.title + ' <span class="badge '+(d.pass?'pass':'fail')+'">'+(d.pass?'PASS':'FAIL')+'</span>';
+    });
+    merged.select('p').text(function(d){ return d.body; });
+  }
+
+  // ---------- render orchestration ----------
+  function renderDayDependent(){
+    document.getElementById('dayVal').textContent = state.day;
+    renderPopulation();
+    renderOutbreak();
+    updateCurveCursor();
+  }
+  function renderAll(){
+    renderFlow();
+    renderCurves();
+    renderPeak();
+    renderVerification();
+    renderDayDependent();
+  }
+
+  recomputeScenario();
+  recompute();
+})();
+</script>
